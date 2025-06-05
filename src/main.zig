@@ -38,6 +38,7 @@ pub fn main() !void {
         time = 0 - time;
     }
     var prng = std.Random.DefaultPrng.init(@intCast(time));
+    // var prng = std.Random.DefaultPrng.init(@intCast(0));
     const random = prng.random();
 
     // allocator
@@ -47,10 +48,10 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     // vaxis
-    var tty = vaxis.Tty.init() catch std.debug.panic("could not init tty", .{});
+    var tty = try vaxis.Tty.init();
     defer tty.deinit();
 
-    var vx = vaxis.init(allocator, .{}) catch std.debug.panic("could not init vaxis", .{});
+    var vx = try vaxis.init(allocator, .{});
     defer vx.deinit(allocator, tty.anyWriter());
 
     var event_loop: vaxis.Loop(Event) = .{
@@ -58,30 +59,30 @@ pub fn main() !void {
         .vaxis = &vx,
     };
 
-    event_loop.start() catch std.debug.panic("could not start event loop", .{});
+    try event_loop.start();
     defer event_loop.stop();
 
-    vx.enterAltScreen(tty.anyWriter()) catch std.debug.panic("could not enter alt screen", .{});
+    try vx.enterAltScreen(tty.anyWriter());
 
-    vx.queryTerminal(tty.anyWriter(), std.time.ns_per_s) catch std.debug.panic("could not query terminal", .{});
+    try vx.queryTerminal(tty.anyWriter(), std.time.ns_per_s);
 
     {
         const event = event_loop.nextEvent();
         switch (event) {
-            .winsize => |ws| vx.resize(allocator, tty.anyWriter(), ws) catch std.debug.panic("could not do initial resize", .{}),
+            .winsize => |ws| try vx.resize(allocator, tty.anyWriter(), ws),
             else => {},
         }
     }
 
     {
         var tty_bw = tty.bufferedWriter();
-        vx.render(tty_bw.writer().any()) catch std.debug.panic("could not render screen", .{});
-        tty_bw.flush() catch std.debug.panic("could not flush screen", .{});
+        try vx.render(tty_bw.writer().any());
+        try tty_bw.flush();
     }
 
     var running: u8 = 3; // magic number, multiple "key presses" are always sent, so we count down from 3
 
-    var streams: []Stream = allocator.alloc(Stream, vx.window().width * vx.window().height / 2) catch std.debug.panic("oom on initial streams alloc", .{});
+    var streams: []Stream = try allocator.alloc(Stream, vx.window().width * vx.window().height);
 
     for (0..(streams.len / 2 - 1)) |current_stream| {
         streams[current_stream] = .{
@@ -92,23 +93,15 @@ pub fn main() !void {
             .last_character = 0,
         };
     }
-    // for (0..(streams.len / 2 - 1)) |current_stream| {
-    //     streams[current_stream] = .{
-    //         .column = random.intRangeLessThan(u16, 0, vx.window().width - 1),
-    //         .length = random.intRangeLessThan(u16, 0, vx.window().height - 1),
-    //         .current_row = random.intRangeLessThan(u16, 0, vx.window().height - 1),
-    //         .finished = false,
-    //         .last_character = 0,
-    //     };
-    // }
 
     // main loop
     while (running >= 1) {
         const window = vx.window();
         var tty_bw = tty.bufferedWriter();
 
-        for (0..(streams.len - 1)) |current_stream| {
+        for (0..(streams.len - 1)) |current_stream_number| {
             const random_number = random.intRangeLessThan(u8, 0, 93);
+            const current_stream = &streams[current_stream_number];
 
             _ = window.print(&.{
                 .{
@@ -116,14 +109,13 @@ pub fn main() !void {
                     .style = vaxis.Style{
                         .bold = true,
                         .fg = .{
-                            // .rgb = .{ 0xAA, 0xAA, 0xAA },
                             .index = 7,
                         },
                     },
                 },
             }, .{
-                .row_offset = streams[current_stream].current_row + 1,
-                .col_offset = streams[current_stream].column,
+                .row_offset = current_stream.current_row + 1,
+                .col_offset = current_stream.column,
             });
 
             _ = window.print(&.{
@@ -137,26 +129,22 @@ pub fn main() !void {
                     },
                 },
             }, .{
-                .row_offset = streams[current_stream].current_row,
-                .col_offset = streams[current_stream].column,
+                .row_offset = current_stream.current_row,
+                .col_offset = current_stream.column,
             });
 
-            const length: i64 = streams[current_stream].length;
-            const current_row: i64 = streams[current_stream].current_row;
-            const clearing_position: i64 = current_row - length;
-            const clearing_position_absoluted: i64 = @max(clearing_position, 0);
-            const clearing_position_casted: u63 = @intCast(clearing_position_absoluted);
-            const clearing_position_truncated: u16 = @truncate(clearing_position_casted);
-
-            window.writeCell(streams[current_stream].column, clearing_position_truncated, .{
+            window.writeCell(current_stream.column, current_stream.current_row - current_stream.length, .{
                 .char = .{
                     .grapheme = " ",
                 },
             });
 
-            streams[current_stream].last_character = random_number;
-            streams[current_stream].current_row += 1;
+            current_stream.last_character = random_number;
+            current_stream.current_row += 1;
         }
+
+        try vx.render(tty_bw.writer().any());
+        try tty_bw.flush();
 
         {
             const event = event_loop.tryEvent();
@@ -171,11 +159,8 @@ pub fn main() !void {
             }
         }
 
-        try vx.render(tty_bw.writer().any());
-        try tty_bw.flush();
-
         for (0..(streams.len - 1)) |current_stream| {
-            if (streams[current_stream].current_row == (window.height + streams[current_stream].length + 2)) {
+            if (streams[current_stream].current_row >= (window.height + streams[current_stream].length + 2)) {
                 streams[current_stream].finished = true;
                 break;
             }
@@ -187,7 +172,6 @@ pub fn main() !void {
                     streams[current_stream] = .{
                         .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
                         .column = random.intRangeLessThan(u16, 0, window.width - 1),
-                        // .current_row = random.intRangeLessThan(u16, 0, (window.height - 1) / 3),
                         .current_row = 0,
                         .finished = false,
                         .last_character = 0,
