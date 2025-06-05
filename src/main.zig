@@ -133,11 +133,13 @@ pub fn main() !void {
                 .col_offset = current_stream.column,
             });
 
-            window.writeCell(current_stream.column, current_stream.current_row - current_stream.length, .{
-                .char = .{
-                    .grapheme = " ",
-                },
-            });
+            if (@as(i17, current_stream.current_row) - @as(i17, current_stream.length) >= -1) {
+                window.writeCell(current_stream.column, @as(u16, @max(0, @as(i17, current_stream.current_row) - @as(i17, current_stream.length))), .{
+                    .char = .{
+                        .grapheme = " ",
+                    },
+                });
+            }
 
             current_stream.last_character = random_number;
             current_stream.current_row += 1;
