@@ -29,6 +29,10 @@
             .url = "git+https://github.com/rockorager/libvaxis.git#84d6cb381c0d628550fac3f6daa24c5faf7b2cd1",
             .hash = "vaxis-0.1.0-BWNV_O8OCQBC4w-MnOGaKw9zFVFgTxf3XfcvgScUagEJ",
         },
+        .clap = .{
+            .url = "git+https://github.com/Hejsil/zig-clap#cc5c6a5d71a317ed4b0ad776842d1d0655f72d0a",
+            .hash = "clap-0.10.0-oBajB7jkAQAZ4cKLlzkeV9mDu2yGZvtN2QuOyfAfjBij",
+        },
     },
     .paths = .{
         "build.zig",

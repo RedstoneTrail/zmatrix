@@ -13,11 +13,17 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const clap = b.dependency("clap", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const vaxis = b.dependency("vaxis", .{
         .target = target,
         .optimize = optimize,
     });
 
+    exe.root_module.addImport("clap", clap.module("clap"));
     exe.root_module.addImport("vaxis", vaxis.module("vaxis"));
 
     b.installArtifact(exe);
