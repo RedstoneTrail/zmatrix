@@ -36,6 +36,28 @@ const help_message =
     \\-h, --help                Print this help, then exit.
 ;
 
+pub fn initialse_stream() Stream {
+    const stream: Stream = .{
+        .column = 0,
+        .length = 3,
+        .current_row = 0,
+        .finished = true,
+        .last_character = 0,
+    };
+    return stream;
+}
+
+pub fn random_stream(random: std.Random, window: vaxis.Window) Stream {
+    const stream: Stream = .{
+        .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
+        .column = random.intRangeLessThan(u16, 0, window.width - 1),
+        .current_row = 0,
+        .finished = false,
+        .last_character = 0,
+    };
+    return stream;
+}
+
 pub fn main() !void {
     // prng
     var time = std.time.nanoTimestamp();
@@ -43,16 +65,10 @@ pub fn main() !void {
         time = 0 - time;
     }
     var prng = std.Random.DefaultPrng.init(@intCast(time));
-    // var prng = std.Random.DefaultPrng.init(@intCast(0));
     const random = prng.random();
 
-    // allocator
-    // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    // defer arena.deinit();
-    // const allocator = arena.allocator();
-
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
-    // defer gpa.deinit();
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // clap
@@ -71,13 +87,7 @@ pub fn main() !void {
     if (result.args.help != 0) {
         std.debug.print("{s}\n", .{help_message});
     } else {
-        const indefinite = blk: {
-            if (result.args.indefinite != 0) {
-                break :blk true;
-            } else {
-                break :blk false;
-            }
-        };
+        const indefinite = result.args.indefinite != 0;
 
         const message = result.args.message;
 
@@ -120,13 +130,7 @@ pub fn main() !void {
         defer allocator.free(streams);
 
         for (0..(streams.len - 1)) |current_stream| {
-            streams[current_stream] = .{
-                .column = 0,
-                .length = 3,
-                .current_row = 0,
-                .finished = true,
-                .last_character = 0,
-            };
+            streams[current_stream] = initialse_stream();
         }
 
         // main loop
@@ -229,21 +233,6 @@ pub fn main() !void {
                         });
                     }
                 }
-
-                // {
-                //     var active: u64 = 0;
-                //     var inactive: u64 = 0;
-                //     const total: u64 = streams.len;
-                //     for (0..streams.len - 1) |current| {
-                //         if (streams[current].finished) {
-                //             inactive += 1;
-                //         } else {
-                //             active += 1;
-                //         }
-                //     }
-
-                //     std.debug.print("active: {}, inactive: {}, total: {}\n", .{ active, inactive, total });
-                // }
             }
 
             try vx.render(tty_bw.writer().any());
@@ -256,10 +245,6 @@ pub fn main() !void {
                         .key_press => {
                             if (!indefinite) {
                                 running -= 1;
-                            } else {
-                                for (0..(streams.len - 1)) |current_stream| {
-                                    streams[current_stream].finished = true;
-                                }
                             }
                         },
                         .winsize => |ws| {
@@ -272,29 +257,14 @@ pub fn main() !void {
 
             for (0..(streams.len - 1)) |current_stream| {
                 if (streams[current_stream].current_row > (window.height + streams[current_stream].length)) {
-                    // streams[current_stream].finished = true;
-                    streams[current_stream] = .{
-                        .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
-                        .column = random.intRangeLessThan(u16, 0, window.width - 1),
-                        .current_row = 0,
-                        .finished = false,
-                        .last_character = 0,
-                    };
-                    // break;
+                    streams[current_stream] = random_stream(random, window);
                 }
             }
 
             for (0..window.width / window.height * 4) |_| {
                 for (0..(streams.len - 1)) |current_stream| {
                     if (streams[current_stream].finished) {
-                        streams[current_stream] = .{
-                            .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
-                            .column = random.intRangeLessThan(u16, 0, window.width - 1),
-                            .current_row = 0,
-                            .finished = false,
-                            .last_character = 0,
-                        };
-                        streams[current_stream].finished = false;
+                        streams[current_stream] = random_stream(random, window);
                         break;
                     }
                 }
