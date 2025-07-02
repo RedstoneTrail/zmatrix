@@ -36,7 +36,7 @@ const help_message =
     \\-h, --help                Print this help, then exit.
 ;
 
-pub fn initialse_stream() Stream {
+pub fn initialseStream() Stream {
     const stream: Stream = .{
         .column = 0,
         .length = 3,
@@ -47,7 +47,7 @@ pub fn initialse_stream() Stream {
     return stream;
 }
 
-pub fn random_stream(random: std.Random, window: vaxis.Window) Stream {
+pub fn randomStream(random: std.Random, window: vaxis.Window) Stream {
     const stream: Stream = .{
         .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
         .column = random.intRangeLessThan(u16, 0, window.width - 1),
@@ -130,7 +130,7 @@ pub fn main() !void {
         defer allocator.free(streams);
 
         for (0..(streams.len - 1)) |current_stream| {
-            streams[current_stream] = initialse_stream();
+            streams[current_stream] = initialseStream();
         }
 
         // main loop
@@ -219,7 +219,7 @@ pub fn main() !void {
                             },
                         });
 
-                        // awful method, doesn't fully print otherwise (not sure why)
+                        // awful method, but doesn't fully print otherwise (not sure why)
                         _ = window.print(&.{
                             .{
                                 .text = @constCast(msg),
@@ -257,14 +257,14 @@ pub fn main() !void {
 
             for (0..(streams.len - 1)) |current_stream| {
                 if (streams[current_stream].current_row > (window.height + streams[current_stream].length)) {
-                    streams[current_stream] = random_stream(random, window);
+                    streams[current_stream] = randomStream(random, window);
                 }
             }
 
             for (0..window.width / window.height * 4) |_| {
                 for (0..(streams.len - 1)) |current_stream| {
                     if (streams[current_stream].finished) {
-                        streams[current_stream] = random_stream(random, window);
+                        streams[current_stream] = randomStream(random, window);
                         break;
                     }
                 }
