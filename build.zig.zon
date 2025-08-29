@@ -6,7 +6,7 @@
     //
     // It is redundant to include "zig" in this name because it is already
     // within the Zig package namespace.
-    .name = .zig_wgpu,
+    .name = .zmatrix,
 
     .fingerprint = 0x5d0e853aefb3335c,
 
