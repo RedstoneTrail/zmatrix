@@ -1,8 +1,8 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    // const target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
+    // const target = b.standardTargetOptions(.{});
+    const target = b.resolveTargetQuery(.{ .cpu_model = .baseline });
 
     const optimize = b.standardOptimizeOption(.{});
 
@@ -25,6 +25,8 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("clap", clap.module("clap"));
     exe.root_module.addImport("vaxis", vaxis.module("vaxis"));
+
+    exe.linkLibC();
 
     b.installArtifact(exe);
 

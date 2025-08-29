@@ -2,6 +2,9 @@ const std = @import("std");
 const vaxis = @import("vaxis");
 const clap = @import("clap");
 
+const inactive_colour = .{ 0xff, 0xff, 0xff };
+const active_colour = .{ 0x00, 0xff, 0x00 };
+
 const Event = union(enum) {
     key_press: vaxis.Key,
     winsize: vaxis.Winsize,
@@ -30,11 +33,23 @@ const characters = blk: {
 };
 
 const help_message =
-    \\-i, --indefinite          Run forever (must be stopped via a signal)
-    \\-m, --message     <str>   Display a message onscreen at all times
+    \\-i, --indefinite                 Run forever (must be stopped via a signal)
+    \\-m, --message              <str> Display a message onscreen at all times
     \\
-    \\-h, --help                Print this help, then exit.
+    \\-h, --help                       Print this help, then exit.
 ;
+
+var random_values: [1024]usize = undefined;
+var random_index: usize = undefined;
+
+pub fn randomInt(T: type) T {
+    const chosen_value: T = @truncate(random_values[random_index]);
+    random_index += 1;
+    if (random_index > 1023) {
+        random_index = 0;
+    }
+    return chosen_value;
+}
 
 pub fn initialseStream() Stream {
     const stream: Stream = .{
@@ -47,10 +62,13 @@ pub fn initialseStream() Stream {
     return stream;
 }
 
-pub fn randomStream(random: std.Random, window: vaxis.Window) Stream {
+// pub fn randomStream(random: std.Random, window: vaxis.Window) Stream {
+pub fn randomStream(window: vaxis.Window) Stream {
     const stream: Stream = .{
-        .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
-        .column = random.intRangeLessThan(u16, 0, window.width - 1),
+        // .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
+        // .column = random.intRangeLessThan(u16, 0, window.width - 1),
+        .length = (randomInt(u16) % ((window.height - 1) * 2 / 3 - 3)) + 3,
+        .column = randomInt(u16) % (window.width - 1),
         .current_row = 0,
         .finished = false,
         .last_character = 0,
@@ -59,13 +77,20 @@ pub fn randomStream(random: std.Random, window: vaxis.Window) Stream {
 }
 
 pub fn main() !void {
-    // prng
-    var time = std.time.nanoTimestamp();
-    if (time <= 0) {
-        time = 0 - time;
-    }
+    const time: usize = @intCast(std.time.nanoTimestamp());
     var prng = std.Random.DefaultPrng.init(@intCast(time));
-    const random = prng.random();
+    const random_generator = prng.random();
+
+    random_values = blk: {
+        var set: [1024]usize = undefined;
+
+        for (0..1023) |i| {
+            set[i] = random_generator.int(@TypeOf(set[i]));
+        }
+
+        break :blk set;
+    };
+    random_index = random_generator.intRangeAtMost(usize, 0, 1023);
 
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
@@ -139,7 +164,9 @@ pub fn main() !void {
             var tty_bw = tty.bufferedWriter();
 
             for (0..(streams.len - 1)) |current_stream_number| {
-                const random_number = random.intRangeLessThan(u8, 0, 93);
+                // const random_number = random.intRangeLessThan(u8, 0, 93);
+                var random_number = randomInt(u7);
+                random_number = random_number % 93;
                 const current_stream = &streams[current_stream_number];
 
                 _ = window.print(&.{
@@ -148,7 +175,7 @@ pub fn main() !void {
                         .style = vaxis.Style{
                             .bold = true,
                             .fg = .{
-                                .index = 7,
+                                .rgb = inactive_colour,
                             },
                         },
                     },
@@ -163,7 +190,7 @@ pub fn main() !void {
                         .style = vaxis.Style{
                             .bold = false,
                             .fg = .{
-                                .index = 2,
+                                .rgb = active_colour,
                             },
                         },
                     },
@@ -257,14 +284,16 @@ pub fn main() !void {
 
             for (0..(streams.len - 1)) |current_stream| {
                 if (streams[current_stream].current_row > (window.height + streams[current_stream].length)) {
-                    streams[current_stream] = randomStream(random, window);
+                    // streams[current_stream] = randomStream(random, window);
+                    streams[current_stream] = randomStream(window);
                 }
             }
 
             for (0..window.width / window.height * 4) |_| {
                 for (0..(streams.len - 1)) |current_stream| {
                     if (streams[current_stream].finished) {
-                        streams[current_stream] = randomStream(random, window);
+                        // streams[current_stream] = randomStream(random, window);
+                        streams[current_stream] = randomStream(window);
                         break;
                     }
                 }
