@@ -50,7 +50,6 @@ pub fn initialseStream() Stream {
     return stream;
 }
 
-// pub fn randomStream(random: std.Random, window: vaxis.Window) Stream {
 pub fn randomStream(window: vaxis.Window) Stream {
     const stream: Stream = .{
         // .length = random.intRangeLessThan(u16, 3, (window.height - 1) * 2 / 3),
@@ -174,7 +173,6 @@ pub fn main() !void {
             var tty_bw = tty.bufferedWriter();
 
             for (0..(streams.len - 1)) |current_stream_number| {
-                // const random_number = random.intRangeLessThan(u8, 0, 93);
                 var random_number = randomInt(u7);
                 random_number = random_number % 93;
                 const current_stream = &streams[current_stream_number];
@@ -257,17 +255,17 @@ pub fn main() !void {
                         });
 
                         // awful method, but doesn't fully print otherwise (not sure why)
-                        _ = window.print(&.{
-                            .{
-                                .text = @constCast(msg),
-                                .style = vaxis.Style{
-                                    .bold = true,
-                                },
-                            },
-                        }, .{
-                            .row_offset = window.height / 2,
-                            .col_offset = @min(@max(0, (window.width - msg.len) / 2), std.math.pow(u16, 2, 15) - 1),
-                        });
+                        // _ = window.print(&.{
+                        //     .{
+                        //         .text = @constCast(msg),
+                        //         .style = vaxis.Style{
+                        //             .bold = true,
+                        //         },
+                        //     },
+                        // }, .{
+                        //     .row_offset = window.height / 2,
+                        //     .col_offset = @min(@max(0, (window.width - msg.len) / 2), std.math.pow(u16, 2, 15) - 1),
+                        // });
                     }
                 }
             }
@@ -294,7 +292,6 @@ pub fn main() !void {
 
             for (0..(streams.len - 1)) |current_stream| {
                 if (streams[current_stream].current_row > (window.height + streams[current_stream].length)) {
-                    // streams[current_stream] = randomStream(random, window);
                     streams[current_stream] = randomStream(window);
                 }
             }
@@ -302,7 +299,6 @@ pub fn main() !void {
             for (0..window.width / window.height * 4) |_| {
                 for (0..(streams.len - 1)) |current_stream| {
                     if (streams[current_stream].finished) {
-                        // streams[current_stream] = randomStream(random, window);
                         streams[current_stream] = randomStream(window);
                         break;
                     }
