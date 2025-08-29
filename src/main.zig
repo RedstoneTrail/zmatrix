@@ -253,19 +253,6 @@ pub fn main() !void {
                                 .grapheme = " ",
                             },
                         });
-
-                        // awful method, but doesn't fully print otherwise (not sure why)
-                        // _ = window.print(&.{
-                        //     .{
-                        //         .text = @constCast(msg),
-                        //         .style = vaxis.Style{
-                        //             .bold = true,
-                        //         },
-                        //     },
-                        // }, .{
-                        //     .row_offset = window.height / 2,
-                        //     .col_offset = @min(@max(0, (window.width - msg.len) / 2), std.math.pow(u16, 2, 15) - 1),
-                        // });
                     }
                 }
             }
