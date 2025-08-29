@@ -39,18 +39,6 @@ const help_message =
     \\-h, --help                       Print this help, then exit.
 ;
 
-var random_values: [1024]usize = undefined;
-var random_index: usize = undefined;
-
-pub fn randomInt(T: type) T {
-    const chosen_value: T = @truncate(random_values[random_index]);
-    random_index += 1;
-    if (random_index > 1023) {
-        random_index = 0;
-    }
-    return chosen_value;
-}
-
 pub fn initialseStream() Stream {
     const stream: Stream = .{
         .column = 0,
@@ -76,11 +64,32 @@ pub fn randomStream(window: vaxis.Window) Stream {
     return stream;
 }
 
+// random number generation system inspired by the original doom engine
+// this globally accessible list of numbers is assigned random values at the start of execution (as opposed to at compile time due to incremetal compilation)
+// so only 1024 random calls are ever made to generate these values
+// this benefit is only minor at first, but after a bit over 1024 random calls (very quick to reach) it becomes much more efficient
+// little noticable difference in resulting visual effect due to how many random calls are made, it is unpredictable again
+var random_values: [1024]usize = undefined;
+var random_index: usize = undefined;
+
+pub fn randomInt(T: type) T {
+    const chosen_value: T = @truncate(random_values[random_index]);
+    random_index += 1;
+    if (random_index > 1023) {
+        random_index = 0;
+    }
+    return chosen_value;
+}
+
 pub fn main() !void {
+    // wait half a second before starting to ensure that the window is the right size (in case a new one is opened for the program)
+    std.Thread.sleep(std.time.ns_per_s / 2);
+
     const time: usize = @intCast(std.time.nanoTimestamp());
     var prng = std.Random.DefaultPrng.init(@intCast(time));
     const random_generator = prng.random();
 
+    // generate random values for doom-style random table
     random_values = blk: {
         var set: [1024]usize = undefined;
 
@@ -90,8 +99,9 @@ pub fn main() !void {
 
         break :blk set;
     };
-    random_index = random_generator.intRangeAtMost(usize, 0, 1023);
+    random_index = 0;
 
+    // allocator
     var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
