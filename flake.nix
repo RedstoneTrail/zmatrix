@@ -39,7 +39,7 @@
           nativeBuildInputs = [
             zig
           ];
-          packages = [ zls ];
+          # packages = [ zls ];
         };
       }
     );

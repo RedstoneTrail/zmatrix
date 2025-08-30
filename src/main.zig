@@ -33,10 +33,11 @@ const characters = blk: {
 };
 
 const help_message =
-    \\-i, --indefinite                 Run forever (must be stopped via a signal)
-    \\-m, --message              <str> Display a message onscreen at all times
+    \\-i, --indefinite        Run forever (must be stopped via a signal)
+    \\-m, --message     <str> Display a message onscreen at all times
+    \\-d, --delay     <usize> The delay between updates in milliseconds (does not account for stdout speed)
     \\
-    \\-h, --help                       Print this help, then exit.
+    \\-h, --help              Print this help, then exit.
 ;
 
 pub fn initialseStream() Stream {
@@ -125,6 +126,14 @@ pub fn main() !void {
 
         const message = result.args.message;
 
+        const delay = blk: {
+            if (result.args.delay) |delay| {
+                break :blk delay;
+            } else {
+                break :blk 100;
+            }
+        };
+
         // vaxis
         var tty = try vaxis.Tty.init();
         defer tty.deinit();
@@ -160,7 +169,8 @@ pub fn main() !void {
 
         var running: u8 = 3; // magic number, multiple "key presses" are always sent, so we count down from 3
 
-        var streams: []Stream = try allocator.alloc(Stream, vx.window().width * vx.window().height / 20);
+        // var streams: []Stream = try allocator.alloc(Stream, vx.window().width * vx.window().height / 20);
+        var streams: []Stream = try allocator.alloc(Stream, vx.window().width * (vx.window().height / 40 + 1));
         defer allocator.free(streams);
 
         for (0..(streams.len - 1)) |current_stream| {
@@ -292,7 +302,7 @@ pub fn main() !void {
                 }
             }
 
-            std.Thread.sleep(std.time.ns_per_ms * 100);
+            std.Thread.sleep(std.time.ns_per_ms * delay);
         }
     }
 }
