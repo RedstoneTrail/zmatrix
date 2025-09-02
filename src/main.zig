@@ -75,7 +75,7 @@ var random_index: usize = undefined;
 pub fn randomInt(T: type) T {
     const chosen_value: T = @truncate(random_values[random_index]);
     random_index += 1;
-    if (random_index > 1023) {
+    if (random_index > (random_values.len - 1)) {
         random_index = 0;
     }
     return chosen_value;
@@ -91,9 +91,9 @@ pub fn main() !void {
 
     // generate random values for doom-style random table
     random_values = blk: {
-        var set: [1024]usize = undefined;
+        var set: @TypeOf(random_values) = undefined;
 
-        for (0..1023) |i| {
+        for (0..(set.len - 1)) |i| {
             set[i] = random_generator.int(@TypeOf(set[i]));
         }
 
